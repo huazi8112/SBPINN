@@ -1,0 +1,4 @@
+Model,Computational_work_to_target_accuracy,Total_time_to_target_accuracy_s,Final_probability_mass_deviation
+Vanilla fPINN,1500 iterations,131.08,1.440%
+SBPINN,3000+850 iterations,27.99,0.899%
+Galerkin FEM,"49 DOFs, 50 time steps",0.1297,1.706%

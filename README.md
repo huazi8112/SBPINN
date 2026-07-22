@@ -1,131 +1,82 @@
-# SBPINN (Fractional Score-Based PINN Solver Framework)
+# SBPINN: A Fractional Score-Based PINN Solver Framework for Lévy Noise-Driven Systems
 
-## 1. System Requirements
+This repository contains the code and manuscript result tables for the two-stage fractional score-based physics-informed neural network (SBPINN) framework. The method learns a score field from stochastic trajectories in Stage I and reconstructs a non-negative log-density under the fractional Fokker–Planck equation in Stage II. Local terms are evaluated by automatic differentiation and the nonlocal Riesz fractional operator is approximated with Grünwald–Letnikov discretizations.
 
-* **Python** 3.8+ (for neural network training, evaluation, and scientific visualization)
-* **Hardware**: CUDA-enabled GPU is highly recommended for accelerating fractional operator evaluation.
-  * Required packages: `torch` (PyTorch), `scipy`, `numpy`, `pandas`, `matplotlib`, `tqdm`
+## Experiments corresponding to the manuscript
 
----
+| Manuscript section | Directory | Main content |
+|---|---|---|
+| Section 3.1 | `experiments/linear_fou/` | Exact-reference linear fractional OU validation for `alpha=1.5,1.6,1.7,1.8` |
+| Section 3.2 | `experiments/baseline_comparison/` | Vanilla fPINN comparison, probability consistency, and Galerkin FEM efficiency |
+| Section 3.3.2 | `experiments/two_dimensional_periodic/` | Nonlinear periodic torus benchmark and periodic Q1 FEM baseline |
+| Section 3.3.3 | `experiments/two_dimensional_dirichlet/` | Killed-Lévy exterior-Dirichlet benchmark and mass-lumped P1 FEM baseline |
+| Section 3.4 | `experiments/bistable/` | Two-expert bimodal density reconstruction |
+| Section 3.5 | `experiments/parameter_inversion/` | Mean-reversion parameter identification |
+| Section 3.6 | `experiments/multiplicative_noise/` | State-dependent Lévy noise with a spatial-median approximation |
 
-## 2. Overview
+The numerical values reported in Tables 1–6 are provided in `results/paper_tables/`.
 
-SBPINN is a computational framework for solving fractional Fokker-Planck (FFP) equations and modeling complex anomalous diffusion systems driven by $\alpha$-stable Lévy noise. 
+## Installation
 
-The pipeline integrates:
+Python 3.10 or later is recommended.
 
-* Data-driven Sliced Score Matching (SSM)
-* Log-likelihood reconstruction under physical constraints
-* Grünwald-Letnikov (GL) discrete approximation for nonlocal Riesz derivatives
-* Asymptotic boundary padding strategy to eliminate truncation singularities
-* Adaptive physical weighting mechanism (via $e^q$ multiplier) to ensure stable convergence
-* High-fidelity, publication-ready academic visualizations (Nature/Cell/SIAM styling standards using Times New Roman).
-
-The framework is validated on four distinct dynamical scenarios: **Linear fOU Process**, **Nonlinear Bistable System**, **Parameter Inversion Problem**, and **Multiplicative Noise-Driven System**.
-
----
-
-## 3. Repository Structure
-
-```text
-SBPINN/
-│
-├── 1.Linear_fOU_Process/             # Scripts for linear fractional OU process
-├── 2.Bistable_System/                # Scripts for nonlinear bimodal distributions
-├── 3.Parameter_Inversion/            # Scripts for inverse parameter identification
-├── 4.Multiplicative_Noise/           # Scripts for state-dependent noise systems
-├── 5.Benchmarks/                     # Baseline comparison and efficiency evaluation
-└── README.md                         # Project documentation
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# Linux/macOS: source .venv/bin/activate
+pip install -r requirements.txt
+python scripts/check_environment.py
 ```
 
----
+A CUDA-enabled GPU is strongly recommended for the formal two-dimensional SBPINN runs. The FEM stages are executed on CPU.
 
-## 4. File Descriptions
+## Quick checks
 
-### 4.1 Linear Fractional OU Process (`1.Linear_fOU_Process/`)
+Syntax check for every experiment script:
 
-**Scripts:**
+```bash
+python scripts/syntax_check.py
+```
 
-| File | Description |
-| :--- | :--- |
-| `train_linear_fou.py` | Main script for training the two-stage model on the linear fOU process and generating PDF evolution figures. |
-| `eval_linear_fou.py` | Evaluates the model across different stability indices ($\alpha$) and outputs quantitative error metrics (L2, Linf, Wasserstein). |
+Linear fOU smoke test:
 
-### 4.2 Nonlinear Bistable System (`2.Bistable_System/`)
+```bash
+cd experiments/linear_fou
+python train_linear_fou.py --device cpu --alphas 1.5 --quick --no_save_model
+```
 
-**Scripts:**
+Two-dimensional periodic smoke test:
 
-| File | Description |
-| :--- | :--- |
-| `train_bistable_system.py` | Implements the expert divide-and-conquer strategy to avoid mode collapse in bimodal systems and generates visual results. |
-| `eval_bistable_system.py` | Evaluates the superposed bimodal distribution predictions and calculates long-tail structural errors. |
+```bash
+cd experiments/two_dimensional_periodic
+python run_nonlinear_torus_benchmark_isolated.py --quick --device cpu --output_dir results_periodic
+```
 
-### 4.3 Parameter Inversion (`3.Parameter_Inversion/`)
+Two-dimensional Dirichlet smoke test:
 
-**Scripts:**
+```bash
+cd experiments/two_dimensional_dirichlet
+python run_dirichlet_benchmark_isolated.py --quick --device cpu --output_dir results_dirichlet
+```
 
-| File | Description |
-| :--- | :--- |
-| `train_parameter_inversion.py` | Executes the three-stage optimization pipeline to dynamically invert the unknown restoring coefficient ($\lambda$) from synthetic observational data. |
+## Boundary treatments
 
-### 4.4 Multiplicative Noise-Driven System (`4.Multiplicative_Noise/`)
+The repository follows the problem-dependent boundary treatment used in the manuscript:
 
-**Scripts:**
+- truncated whole-space problems: asymptotic power-law exterior extension;
+- periodic problems: periodic wrapping;
+- killed processes: homogeneous exterior zero extension.
 
-| File | Description |
-| :--- | :--- |
-| `train_multiplicative_noise.py` | Incorporates the spatial median approximation strategy to decouple spatially varying coefficients from the nonlocal Riesz operator. |
-| `eval_multiplicative_noise.py` | Generates comprehensive error tables (`.csv`) evaluating the method's accuracy under multiplicative Lévy noise. |
+## Repository policy
 
-### 4.5 Benchmarks & Efficiency (`5.Benchmarks/`)
+Large trajectory arrays, dense reference solutions, and neural-network checkpoints are not committed. The final manuscript tables, compact configuration files, and representative figures are included, while full outputs can be regenerated by the corresponding experiment scripts.
 
-**Scripts:**
+## Citation
 
-| File | Description |
-| :--- | :--- |
-| `benchmark_vanilla_fpinn.py` | Compares SBPINN against traditional soft-penalty Vanilla fPINN, generating absolute error heatmaps and global physical constraint analyses. |
-| `eval_computational_efficiency.py`| Tracks and outputs average execution time, convergence iteration counts, and mass conservation deviation metrics. |
+Please cite the associated manuscript:
 
----
+> H. Xue, J. Zhang, Z. Wang, and H. Wang, “A Fractional Score-Based PINN Solver Framework for Lévy Noise-Driven Systems.”
 
-## 5. Execution Pipeline
+## License
 
-The framework is highly modular. You can run the independent scripts for each experimental scenario. For a standard evaluation of a specific dynamical system, follow this general workflow:
-
-### Step 1: Data Generation & Stage I Training
-**Action:** Run `train_*.py` scripts (e.g., `train_linear_fou.py`).
-**Process:** * Simulates stochastic trajectories using the Euler-Maruyama scheme.
-* Executes Sliced Score Matching (SSM) to estimate the empirical score field.
-* Saves the frozen score network weights as prior knowledge.
-
-### Step 2: Stage II Log-Likelihood Learning
-**Action:** Continues automatically within the `train_*.py` scripts.
-**Process:**
-* Initializes the log-likelihood network.
-* Evaluates fractional ODE residuals using the hybrid AD-GL computational strategy.
-* Applies the asymptotic boundary padding and algebraic residual reconstruction for numerical stability.
-
-### Step 3: Quantitative Evaluation
-**Action:** Run `eval_*.py` scripts (e.g., `eval_linear_fou.py`).
-**Process:**
-* Compares network predictions against large-scale Monte Carlo ground truth.
-* Computes $L^2$ error, $L^{\infty}$ error, and Wasserstein distance.
-* Generates `experimental_errors_table.csv` for statistical reporting.
-
-### Step 4: Academic Visualization
-**Action:** Handled by the training/evaluation scripts.
-**Process:**
-* Outputs high-resolution figures (`.pdf` and `.png`).
-* Figures follow professional standards: Times New Roman font, no background shading, and specific color palettes (Nature/SIAM style).
-* For bimodal systems, plots individual expert fits alongside the assembled global density.
-
----
-
-## 6. Notes
-
-* **Alpha ($\alpha$) Parameter**: This refers to the stability index of the Lévy process ($0 < \alpha < 2$). It determines the rate of power-law decay in the heavy-tailed distributions and the intensity of jump discontinuities.
-* **Fixed GL Weights**: Note that the Grünwald-Letnikov (GL) weights are fixed for calculation once the fractional order is set and are not dynamically adjustable during training.
-* **Numerical Stability**: The framework utilizes an exponential multiplier ($e^q$) in the physical residual reconstruction. This is critical for eliminating numerical singularities and preventing gradient explosion in low-probability tail regions.
-* **Diagram Standards**: All generated visualizations adhere to professional journal standards (Nature/SIAM). Specific textual labels (e.g., "80% High Density") and background shading have been removed to ensure a clean, academic aesthetic.
-* **Boundary Handling**: The asymptotic boundary padding strategy is applied at the spatial truncation threshold (e.g., $|x| = 5.0$ or $8.0$) to handle the contradiction between finite domains and infinite-domain fractional dynamics.
-* **Output**: All high-resolution figures (`.pdf`, `.png`) and quantitative result tables (`.csv`) are saved directly to the root directory of the project upon script completion.
+MIT License. See `LICENSE`.

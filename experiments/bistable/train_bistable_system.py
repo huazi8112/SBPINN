@@ -1,6 +1,4 @@
-"""
-实验二:非线性双稳态系统
-"""
+"""Train the two-expert SBPINN for the nonlinear bistable system."""
 
 import os
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'

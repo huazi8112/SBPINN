@@ -1,11 +1,7 @@
-"""
-实验二（多Alpha严格复刻版）：非线性双稳态系统 - 维度修复版
-修正内容：
-1. 修复 fractional_derivative_GL_Safe 中因 Mask 导致的 tensor 形状不匹配错误 (RuntimeError)
-2. 保持纯 Levy 噪声、概率空间残差、渐进边界填充逻辑不变
+"""Evaluate the nonlinear bistable SBPINN experiment for multiple stability indices.
 
-作者：Research Student (Fixed by Gemini)
-日期：2026-01-12
+The implementation retains the probability-space residual, asymptotic exterior
+padding, and two-expert reconstruction used for the manuscript results.
 """
 
 import os
