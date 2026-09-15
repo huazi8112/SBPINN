@@ -10,7 +10,7 @@ Main revisions
    rate, exact initial-score anchoring, and a light odd-symmetry constraint.
 4. Stage II keeps the two-stage framework and does not use score-integration
    initialization.  It uses a score-consistency warm-up followed by gradual
-   activation of the shifted-GL FFP residual, score-to-grad(q) continuation,
+   activation of the standard-GL FFP residual, score-to-grad(q) continuation,
    multi-time mass regularization, and a hard initial condition.
 5. The collocation set contains stronger tail coverage, which is especially
    useful for alpha=1.5.
@@ -114,7 +114,7 @@ class Config:
     pde_ramp_epochs: int = 1200
     score_to_q_ramp_epochs: int = 1200
 
-    # Shifted GL and mass quadrature.
+    # Standard GL and mass quadrature.
     gl_dx: float = 0.08
     gl_terms: int = 80
     mass_quad_points: int = 161
@@ -323,7 +323,7 @@ def generate_stage_datasets(
 
 
 # =============================================================================
-# Shifted GL derivative and global mass
+# Standard GL derivative and global mass
 # =============================================================================
 def gl_coefficients(
     alpha: float, n_terms: int, device: torch.device
@@ -347,7 +347,7 @@ def fractional_derivative_gl(
         1, cfg.gl_terms
     )
     shifts = (
-        (torch.arange(cfg.gl_terms, dtype=x.dtype, device=device) - 1.0)
+        torch.arange(cfg.gl_terms, dtype=x.dtype, device=device)
         * cfg.gl_dx
     ).view(1, cfg.gl_terms)
 

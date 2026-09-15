@@ -192,7 +192,7 @@ def generate_split_data(sde, T, N_train, M):
 # ==========================================
 # 4. 训练流程 (严格公式匹配)
 # ==========================================
-def train_expert(name, data, sde, iterations=5000, batch_size=256):
+def train_expert(name, data, sde, iterations=5000, batch_size=256, score_to_q_ramp_iterations=1200):
     x_all = torch.tensor(data[:, 0:1], device=DEVICE)
     t_all = torch.tensor(data[:, 1:2], device=DEVICE)
     N_data = x_all.shape[0]
@@ -218,6 +218,10 @@ def train_expert(name, data, sde, iterations=5000, batch_size=256):
         opt_s.step()
         if i % 10 == 0: loss_history_s.append(loss.item())
 
+    # Freeze the Stage-I teacher during Stage II.  This also disables the
+    # Dropout layer in ScoreNetwork so that the teacher function is deterministic.
+    score_net.eval()
+
     # --- Phase 2: LL Training ---
     ll_net = LLNetwork().to(DEVICE)
     opt_l = Adam(ll_net.parameters(), lr=1e-3)
@@ -234,6 +238,13 @@ def train_expert(name, data, sde, iterations=5000, batch_size=256):
         q = ll_net(bx, bt)
         exp_q = torch.exp(q)
         s_target = score_net(bx, bt).detach()
+        grad_q = torch.autograd.grad(q.sum(), bx, create_graph=True)[0]
+
+        # Stage-II score-to-q_x homotopy.  The Stage-I score network remains
+        # frozen as a teacher, while its PDE weight is gradually handed over
+        # to the self-consistent score grad_x q_phi.
+        q_fraction = min(1.0, (i + 1) / max(score_to_q_ramp_iterations, 1))
+        score_for_pde = (1.0 - q_fraction) * s_target + q_fraction * grad_q
 
         # 2. 时间导数
         dq_dt = torch.autograd.grad(q.sum(), bt, create_graph=True)[0]
@@ -251,19 +262,19 @@ def train_expert(name, data, sde, iterations=5000, batch_size=256):
         D_alpha_term = sigma_alpha * frac_term_val
 
         # 5. 残差组装 (Fokker-Planck probability space form)
-        # Residual = e^q * dq/dt + e^q * (div_f + f * s) - sigma^alpha * D^alpha[e^q]
+        # Residual = e^q * dq/dt + e^q * (div_f + f * s_homotopy) - sigma^alpha * D^alpha[e^q]
 
         term1 = exp_q * dq_dt
-        term2 = exp_q * (div_f + f_val * s_target)
+        term2 = exp_q * (div_f + f_val * score_for_pde)
         term3 = D_alpha_term
 
         residual = term1 + term2 - term3
 
-        # 6. Score Matching 约束
-        grad_q = torch.autograd.grad(q.sum(), bx, create_graph=True)[0]
+        # 6. Score Matching 约束：随 homotopy 逐渐减弱 teacher 权重。
         loss_sm = ((grad_q - s_target)**2).mean()
+        score_weight = 1.0 * (1.0 - 0.75 * q_fraction)
 
-        loss = (residual**2).mean() + 1.0 * loss_sm
+        loss = (residual**2).mean() + score_weight * loss_sm
 
         opt_l.zero_grad()
         loss.backward()

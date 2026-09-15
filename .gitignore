@@ -12,9 +12,9 @@ env/
 .DS_Store
 Thumbs.db
 
-# Generated experiment outputs
-results_*/
+# Generated outputs and large artifacts
 outputs/
+results_*/
 checkpoints/
 *.pt
 *.pth
@@ -22,5 +22,5 @@ checkpoints/
 *.npy
 *.log
 
-# Local reports
+# Local environment probe
 environment_report.json

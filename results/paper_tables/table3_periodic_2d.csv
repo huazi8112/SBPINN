@@ -1,3 +1,0 @@
-Model,Configuration,Relative_L2_error,L1_error,Hellinger_distance,Mass_deviation,Negative_mass
-SBPINN,105730 parameters,3.1246E-02,3.0422E-02,1.5602E-02,0.0000E+00,0.0000E+00
-Periodic Q1 FEM,40x40 cells,4.3851E-02,3.8538E-02,1.8136E-02,3.4622E-05,0.0000E+00

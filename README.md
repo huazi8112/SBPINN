@@ -1,24 +1,26 @@
-# SBPINN: A Fractional Score-Based PINN Solver Framework for Lévy Noise-Driven Systems
+# Score-Based Fractional PINNs for Lévy Noise-Driven Systems
 
-This repository contains the code and manuscript result tables for the two-stage fractional score-based physics-informed neural network (SBPINN) framework. The method learns a score field from stochastic trajectories in Stage I and reconstructs a non-negative log-density under the fractional Fokker–Planck equation in Stage II. Local terms are evaluated by automatic differentiation and the nonlocal Riesz fractional operator is approximated with Grünwald–Letnikov discretizations.
+Code and compact numerical results for the SBPINN manuscript. The framework uses a two-stage strategy: Stage I learns score information from stochastic trajectories, and Stage II reconstructs a non-negative density under the fractional Fokker-Planck physics with a gradual score-to-physics transition.
 
-## Experiments corresponding to the manuscript
+## Repository structure
 
-| Manuscript section | Directory | Main content |
+| Manuscript section | Directory | Main experiment |
 |---|---|---|
-| Section 3.1 | `experiments/linear_fou/` | Exact-reference linear fractional OU validation for `alpha=1.5,1.6,1.7,1.8` |
-| Section 3.2 | `experiments/baseline_comparison/` | Vanilla fPINN comparison, probability consistency, and Galerkin FEM efficiency |
-| Section 3.3.2 | `experiments/two_dimensional_periodic/` | Nonlinear periodic torus benchmark and periodic Q1 FEM baseline |
-| Section 3.3.3 | `experiments/two_dimensional_dirichlet/` | Killed-Lévy exterior-Dirichlet benchmark and mass-lumped P1 FEM baseline |
-| Section 3.4 | `experiments/bistable/` | Two-expert bimodal density reconstruction |
-| Section 3.5 | `experiments/parameter_inversion/` | Mean-reversion parameter identification |
-| Section 3.6 | `experiments/multiplicative_noise/` | State-dependent Lévy noise with a spatial-median approximation |
+| Sec. 3.1 | `experiments/linear_fou/` | 1D fractional Ornstein-Uhlenbeck benchmark |
+| Sec. 3.1.3 | `experiments/boundary_padding/` | exterior-padding error diagnostic |
+| Sec. 3.2 | `experiments/score_ablation/` | score-guided homotopy vs no-score ablation |
+| Sec. 3.3.2 | `experiments/two_dimensional_periodic/` | 2D nonlinear periodic benchmark + Q1 FEM |
+| Sec. 3.3.3 | `experiments/two_dimensional_dirichlet/` | 2D killed-Levy benchmark + P1 FEM |
+| Sec. 3.3.4 | `experiments/score_fpinn_comparison/` | controlled Score-fPINN comparison |
+| Sec. 3.4 | `experiments/bistable/` | two-expert bistable reconstruction |
+| Sec. 3.5 | `experiments/parameter_inversion/` | mean-reversion parameter inversion |
+| Sec. 3.6 | `experiments/multiplicative_noise/` | transformed-u state-dependent Levy noise |
 
-The numerical values reported in Tables 1–6 are provided in `results/paper_tables/`.
+The compact manuscript tables and source CSV/JSON files are under `results/`.
 
 ## Installation
 
-Python 3.10 or later is recommended.
+Python 3.10+ is recommended.
 
 ```bash
 python -m venv .venv
@@ -28,54 +30,97 @@ pip install -r requirements.txt
 python scripts/check_environment.py
 ```
 
-A CUDA-enabled GPU is strongly recommended for the formal two-dimensional SBPINN runs. The FEM stages are executed on CPU.
+A CUDA-enabled GPU is recommended for the full 2D and multi-seed experiments. CPU quick tests are available for several scripts.
 
-## Quick checks
-
-Syntax check for every experiment script:
+## Quick validation
 
 ```bash
 python scripts/syntax_check.py
+python experiments/linear_fou/train_linear_fou.py --device cpu --alphas 1.5 --quick --no_save_model
+python experiments/score_ablation/run_score_stage_ablation.py --device cpu --quick --methods homotopy,no_score
+python experiments/two_dimensional_periodic/run_nonlinear_torus_benchmark_isolated.py --quick --device cpu --output_dir outputs/periodic_quick
+python experiments/two_dimensional_dirichlet/run_dirichlet_benchmark_isolated.py --quick --device cpu --output_dir outputs/dirichlet_quick
+python experiments/multiplicative_noise/run_multiplicative_transformed_u.py --quick --device cpu --output_dir outputs/multiplicative_quick
 ```
 
-Linear fOU smoke test:
+## Main reproduction commands
+
+### 1D fOU
 
 ```bash
-cd experiments/linear_fou
-python train_linear_fou.py --device cpu --alphas 1.5 --quick --no_save_model
+python experiments/linear_fou/train_linear_fou.py --device cuda --alphas 1.5,1.6,1.7,1.8 --output_dir outputs/linear_fou
 ```
 
-Two-dimensional periodic smoke test:
+### Boundary-padding diagnostic
 
 ```bash
-cd experiments/two_dimensional_periodic
-python run_nonlinear_torus_benchmark_isolated.py --quick --device cpu --output_dir results_periodic
+python experiments/boundary_padding/eval_boundary_padding.py --output_dir outputs/boundary_padding
 ```
 
-Two-dimensional Dirichlet smoke test:
+### Score-stage ablation
 
 ```bash
-cd experiments/two_dimensional_dirichlet
-python run_dirichlet_benchmark_isolated.py --quick --device cpu --output_dir results_dirichlet
+python experiments/score_ablation/run_score_stage_ablation.py --device cuda --alpha 1.5 --seeds 42,123,2024,2025,2026 --methods homotopy,no_score --no_score_budget same_stage2_updates --output_dir outputs/score_ablation_matched_updates
+python experiments/score_ablation/run_score_stage_ablation.py --device cuda --alpha 1.5 --seeds 42,123,2024,2025,2026 --methods homotopy,no_score --no_score_budget same_gl --output_dir outputs/score_ablation_matched_gl
 ```
 
-## Boundary treatments
+### 2D benchmarks
 
-The repository follows the problem-dependent boundary treatment used in the manuscript:
+Use the isolated-process runners documented in the corresponding experiment folders.
 
-- truncated whole-space problems: asymptotic power-law exterior extension;
-- periodic problems: periodic wrapping;
-- killed processes: homogeneous exterior zero extension.
+### Score-fPINN comparison
 
-## Repository policy
+Run the SBPINN counterpart with:
 
-Large trajectory arrays, dense reference solutions, and neural-network checkpoints are not committed. The final manuscript tables, compact configuration files, and representative figures are included, while full outputs can be regenerated by the corresponding experiment scripts.
+```bash
+python run_sbpinn_fou_benchmark.py --device cuda --alpha 1.75 --seed 42 --output_dir outputs/sbpinn_alpha175_seed42
+```
+
+and Score-fPINN with:
+
+```bash
+python experiments/score_fpinn_comparison/run_score_fpinn_fou.py --device cuda --alpha 1.75 --seed 42 --output_dir outputs/score_fpinn_alpha175_seed42
+```
+
+Repeat for seeds 42, 123, and 2024.
+
+### Bistable and parameter inversion
+
+```bash
+cd experiments/bistable
+python train_bistable_system.py
+python eval_bistable_system.py
+
+cd ../parameter_inversion
+python train_parameter_inversion.py
+```
+
+### State-dependent multiplicative noise
+
+```bash
+python experiments/multiplicative_noise/run_multiplicative_transformed_u.py --device cuda --alpha 1.5 --beta 0.5 --seed 42 --output_dir outputs/multiplicative_beta05_seed42
+```
+
+Repeat `beta=0.5` for seeds 42, 123, and 2024. The stronger state-dependence check uses `--beta 1.0 --seed 42`.
+
+## Numerical realizations of the fractional operator
+
+The code follows the problem-dependent treatments used in the manuscript:
+
+- one-dimensional truncated whole-space problems: standard Grünwald-Letnikov stencils with asymptotic exterior values;
+- two-dimensional periodic problem: periodic spectral realization;
+- killed process with homogeneous exterior Dirichlet condition: zero-extended spectral realization;
+- multiplicative noise: transformed variable `u=a(x)p` with the spatially varying coefficient retained in the nonlocal term.
+
+## Reproducibility policy
+
+The public release excludes large neural-network checkpoints, dense trajectory arrays, and temporary pilot outputs. Compact source data, final quantitative tables, representative figures, experiment configurations, and all active scripts required to regenerate the results are included.
 
 ## Citation
 
-Please cite the associated manuscript:
+If you use this code, please cite the associated manuscript:
 
-> H. Xue, J. Zhang, Z. Wang, and H. Wang, “A Fractional Score-Based PINN Solver Framework for Lévy Noise-Driven Systems.”
+> H. Xue, J. Zhang, Z. Wang, H. Wang, *Score-Based Fractional PINNs for Lévy Noise-Driven Systems*.
 
 ## License
 

@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite the associated manuscript."
-title: "SBPINN: A Fractional Score-Based PINN Solver Framework for Lévy Noise-Driven Systems"
+title: "Score-Based Fractional PINNs for Lévy Noise-Driven Systems"
 type: software
 authors:
   - family-names: Xue
@@ -13,5 +13,5 @@ authors:
     given-names: Haohua
 repository-code: "https://github.com/huazi8112/SBPINN"
 license: MIT
-version: 1.0.0
-date-released: 2026-07-22
+version: 1.1.0
+date-released: 2026-09-15
